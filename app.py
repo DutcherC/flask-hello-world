@@ -4,11 +4,17 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Write environment variable cookies to a temporary file if present
 COOKIE_FILE = "/tmp/cookies.txt"
-if "YOUTUBE_COOKIES" in os.environ:
-    with open(COOKIE_FILE, "w") as f:
-        f.write(os.environ["YOUTUBE_COOKIES"])
+
+def setup_cookies():
+    raw_cookies = os.environ.get("YOUTUBE_COOKIES", "")
+    if raw_cookies:
+        # Normalize carriage returns and save clean Netscape format
+        clean_cookies = raw_cookies.replace("\r\n", "\n")
+        with open(COOKIE_FILE, "w", encoding="utf-8") as f:
+            f.write(clean_cookies)
+
+setup_cookies()
 
 @app.route('/')
 def get_stream():
@@ -27,7 +33,6 @@ def get_stream():
             url
         ]
 
-        # Use cookies file if present
         if os.path.exists(COOKIE_FILE):
             cmd.extend(["--cookies", COOKIE_FILE])
 
