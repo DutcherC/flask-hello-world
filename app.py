@@ -1,49 +1,36 @@
-import os
-import subprocess
 from flask import Flask, request, jsonify
+import yt_dlp
 
 app = Flask(__name__)
-
-COOKIE_FILE = "/tmp/cookies.txt"
-
-def setup_cookies():
-    raw_cookies = os.environ.get("YOUTUBE_COOKIES", "")
-    if raw_cookies:
-        clean_cookies = raw_cookies.replace("\r\n", "\n")
-        with open(COOKIE_FILE, "w", encoding="utf-8") as f:
-            f.write(clean_cookies)
-
-setup_cookies()
 
 @app.route('/')
 def get_stream():
     video_id = request.args.get('id')
     if not video_id:
-        return jsonify({"status": "ok", "message": "yt-dlp proxy online. Pass ?id=VIDEO_ID"}), 200
+        return jsonify({"status": "ok", "message": "Pass ?id=VIDEO_ID"}), 200
 
     url = f"https://www.youtube.com/watch?v={video_id}"
-    
+
+    ydl_opts = {
+        'format': 'best[ext=mp4]/best',
+        'quiet': True,
+        'no_warnings': True,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['ios', 'android']
+            }
+        }
+    }
+
     try:
-        cmd = [
-            "yt-dlp",
-            "-g",
-            "-f", "best[ext=mp4]/best",
-            "--no-warnings",
-            # Match standard Chrome User-Agent to validate cookies
-            "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            url
-        ]
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            stream_url = info.get('url')
 
-        if os.path.exists(COOKIE_FILE):
-            cmd.extend(["--cookies", COOKIE_FILE])
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-        
-        if result.returncode == 0 and result.stdout.strip():
-            stream_url = result.stdout.strip().split('\n')[0]
-            return jsonify({"url": stream_url}), 200
-        else:
-            return jsonify({"error": "yt-dlp failed to extract stream", "details": result.stderr}), 500
+            if stream_url:
+                return jsonify({"url": stream_url}), 200
+            else:
+                return jsonify({"error": "No URL found in info dict"}), 500
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
