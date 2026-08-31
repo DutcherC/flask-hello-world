@@ -1,7 +1,14 @@
-from flask import Flask, request, jsonify
+import os
 import subprocess
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
+
+# Write environment variable cookies to a temporary file if present
+COOKIE_FILE = "/tmp/cookies.txt"
+if "YOUTUBE_COOKIES" in os.environ:
+    with open(COOKIE_FILE, "w") as f:
+        f.write(os.environ["YOUTUBE_COOKIES"])
 
 @app.route('/')
 def get_stream():
@@ -12,15 +19,18 @@ def get_stream():
     url = f"https://www.youtube.com/watch?v={video_id}"
     
     try:
-        # Pass extractor arguments to force client types that bypass bot checks on cloud IPs
         cmd = [
             "yt-dlp",
             "-g",
             "-f", "best[ext=mp4]/best",
             "--no-warnings",
-            "--extractor-args", "youtube:player_client=ios,android_vr,tv",
             url
         ]
+
+        # Use cookies file if present
+        if os.path.exists(COOKIE_FILE):
+            cmd.extend(["--cookies", COOKIE_FILE])
+
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
         
         if result.returncode == 0 and result.stdout.strip():
