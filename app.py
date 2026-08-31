@@ -12,15 +12,16 @@ def get_stream():
     url = f"https://www.youtube.com/watch?v={video_id}"
     
     try:
-        # Run yt-dlp to extract the raw progressive MP4 / HLS stream URL
+        # Pass extractor arguments to force client types that bypass bot checks on cloud IPs
         cmd = [
             "yt-dlp",
             "-g",
             "-f", "best[ext=mp4]/best",
             "--no-warnings",
+            "--extractor-args", "youtube:player_client=ios,android_vr,tv",
             url
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
         
         if result.returncode == 0 and result.stdout.strip():
             stream_url = result.stdout.strip().split('\n')[0]
