@@ -9,7 +9,6 @@ COOKIE_FILE = "/tmp/cookies.txt"
 def setup_cookies():
     raw_cookies = os.environ.get("YOUTUBE_COOKIES", "")
     if raw_cookies:
-        # Normalize carriage returns and save clean Netscape format
         clean_cookies = raw_cookies.replace("\r\n", "\n")
         with open(COOKIE_FILE, "w", encoding="utf-8") as f:
             f.write(clean_cookies)
@@ -30,6 +29,8 @@ def get_stream():
             "-g",
             "-f", "best[ext=mp4]/best",
             "--no-warnings",
+            # Match standard Chrome User-Agent to validate cookies
+            "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             url
         ]
 
